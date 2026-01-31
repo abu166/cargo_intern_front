@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
 import { LogIn, User, Building2, Package, Warehouse } from 'lucide-react';
 
 type UserRole = 'operator' | 'corporate' | 'individual' | 'receiver';
 
 export function Login() {
   const { login } = useAuth();
-  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState<UserRole>('operator');

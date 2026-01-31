@@ -19,5 +19,11 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
+  "exclude": [
+    "src/components/ui",
+    "src/components/CartItem.tsx",
+    "src/components/CartPage.tsx",
+    "src/components/CartSummary.tsx"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

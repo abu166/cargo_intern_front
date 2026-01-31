@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useLanguage } from '../contexts/LanguageContext';
-import { Package, Train, CheckCircle, Clock, MapPin } from 'lucide-react';
+import { Package, Train, CheckCircle, MapPin } from 'lucide-react';
 
 interface Task {
   id: string;
@@ -20,7 +19,6 @@ interface Task {
 }
 
 export function ReceiverDashboard() {
-  const { t } = useLanguage();
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: 'T-001',

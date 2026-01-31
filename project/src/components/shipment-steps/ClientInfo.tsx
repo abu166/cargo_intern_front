@@ -1,6 +1,5 @@
 import { ArrowRight, Users } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useEffect } from 'react';
 
 interface ClientInfoProps {
   data: any;

@@ -1,4 +1,4 @@
-import { Search, Filter, QrCode } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useState } from 'react';
 import { ShipmentDetailsModal } from './ShipmentDetailsModal';

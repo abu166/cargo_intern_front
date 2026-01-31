@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useLanguage } from '../contexts/LanguageContext';
 import { Building2, Plus, Search, Edit, Trash2, Phone, Mail, MapPin } from 'lucide-react';
 
 interface CorporateClient {
@@ -15,7 +14,6 @@ interface CorporateClient {
 }
 
 export function CorporateClients() {
-  const { t } = useLanguage();
   const [clients] = useState<CorporateClient[]>([
     {
       id: '1',

@@ -58,7 +58,6 @@ export function NewShipment() {
         return (
           <Payment
             data={shipmentData}
-            onUpdate={updateShipmentData}
             onNext={() => setCurrentStep('documents')}
             onBack={() => setCurrentStep('cargo')}
           />

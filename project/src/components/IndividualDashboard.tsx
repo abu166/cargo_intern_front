@@ -1,11 +1,8 @@
-import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
-import { Package, Plus, MapPin, Ticket } from 'lucide-react';
+import { Package, MapPin, Ticket } from 'lucide-react';
 
 export function IndividualDashboard() {
   const { user } = useAuth();
-  const { t } = useLanguage();
 
   const myShipments = [
     { id: 'SH-2024-201', from: 'Алматы', to: 'Астана', status: 'В пути', date: '20.01.2026', cost: 5000 },

@@ -84,17 +84,6 @@ export function WMS() {
     setMeasurements({ weight: 0, dimensions: '' });
   };
 
-  const getStatusLabel = (status: CellStatus) => {
-    switch (status) {
-      case 'free':
-        return t('free');
-      case 'occupied':
-        return t('occupied');
-      case 'maintenance':
-        return t('maintenance');
-    }
-  };
-
   return (
     <div>
       <div className="mb-8">
@@ -155,17 +144,13 @@ export function WMS() {
             <div className={`p-4 rounded-lg border-2 ${
               selfServiceStep === 'scan' 
                 ? 'border-blue-500 bg-blue-50' 
-                : selfServiceStep !== 'scan' 
-                ? 'border-green-500 bg-green-50' 
-                : 'border-gray-200 bg-gray-50'
+                : 'border-green-500 bg-green-50'
             }`}>
               <div className="flex items-start gap-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                   selfServiceStep === 'scan' 
                     ? 'bg-blue-600 text-white' 
-                    : selfServiceStep !== 'scan'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-300 text-gray-600'
+                    : 'bg-green-600 text-white'
                 }`}>
                   {selfServiceStep !== 'scan' ? <CheckCircle className="w-5 h-5" /> : '1'}
                 </div>

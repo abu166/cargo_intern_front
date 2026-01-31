@@ -1,11 +1,8 @@
-import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
 import { Wallet, Package, FileText, MapPin, Download, TrendingUp } from 'lucide-react';
 
 export function CorporateDashboard() {
   const { user } = useAuth();
-  const { t } = useLanguage();
 
   const shipments = [
     { id: 'SH-2024-101', from: 'Алматы', to: 'Астана', status: 'В пути', progress: 65, date: '20.01.2026' },

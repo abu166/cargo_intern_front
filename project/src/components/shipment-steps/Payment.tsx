@@ -3,12 +3,11 @@ import { useLanguage } from '../../contexts/LanguageContext';
 
 interface PaymentProps {
   data: any;
-  onUpdate: (data: any) => void;
   onNext: () => void;
   onBack: () => void;
 }
 
-export function Payment({ data, onUpdate, onNext, onBack }: PaymentProps) {
+export function Payment({ data, onNext, onBack }: PaymentProps) {
   const { t } = useLanguage();
 
   const calculateTotal = () => {

@@ -27,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (email: string, password: string, role: UserRole) => {
     console.log('Auth login called:', email, role);
+    void password;
     
     // Mock authentication - в реальной системе здесь будет API вызов
     const mockUsers: Record<string, User> = {
