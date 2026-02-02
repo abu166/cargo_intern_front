@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: cargo
+      POSTGRES_PASSWORD: cargo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cargo"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  auth:
+    build:
+      context: .
+      dockerfile: ./services/auth/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg2://cargo:cargo@postgres:5432/auth_db
+      JWT_SECRET: supersecret
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRE_MINUTES: 120
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: admin123
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8001:8000"
+
+  shipments:
+    build:
+      context: .
+      dockerfile: ./services/shipments/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg2://cargo:cargo@postgres:5432/shipments_db
+      JWT_SECRET: supersecret
+      JWT_ALGORITHM: HS256
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8002:8000"
+
+  finance:
+    build:
+      context: .
+      dockerfile: ./services/finance/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg2://cargo:cargo@postgres:5432/finance_db
+      JWT_SECRET: supersecret
+      JWT_ALGORITHM: HS256
+      SHIPMENTS_URL: http://shipments:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8003:8000"
+
+  wms:
+    build:
+      context: .
+      dockerfile: ./services/wms/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg2://cargo:cargo@postgres:5432/wms_db
+      JWT_SECRET: supersecret
+      JWT_ALGORITHM: HS256
+      SHIPMENTS_URL: http://shipments:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      shipments:
+        condition: service_started
+    ports:
+      - "8004:8000"
+
+volumes:
+  pgdata:
