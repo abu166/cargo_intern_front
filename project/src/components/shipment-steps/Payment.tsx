@@ -3,11 +3,12 @@ import { useLanguage } from '../../contexts/LanguageContext';
 
 interface PaymentProps {
   data: any;
-  onNext: () => void;
+  onNext: () => void | Promise<void>;
   onBack: () => void;
+  isSubmitting?: boolean;
 }
 
-export function Payment({ data, onNext, onBack }: PaymentProps) {
+export function Payment({ data, onNext, onBack, isSubmitting }: PaymentProps) {
   const { t } = useLanguage();
 
   const calculateTotal = () => {
@@ -144,7 +145,8 @@ export function Payment({ data, onNext, onBack }: PaymentProps) {
 
         <button
           onClick={onNext}
-          className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+          disabled={isSubmitting}
+          className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           <CreditCard className="w-5 h-5" />
           {t('payButton')} {total.toLocaleString()} ₸

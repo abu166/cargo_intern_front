@@ -134,7 +134,7 @@ def update_user(user_id: int, payload: schemas.UserUpdate, db: Session = Depends
 
 
 @router.post("/clients", response_model=schemas.ClientOut)
-def create_client(payload: schemas.ClientCreate, db: Session = Depends(get_db), _user = Depends(require_roles({"AGENT", "ADMIN"}))):
+def create_client(payload: schemas.ClientCreate, db: Session = Depends(get_db), _user = Depends(require_roles({"AGENT", "ADMIN", "OPERATOR"}))):
     client = services.register_client(db, payload.full_name, payload.document_id, payload.phone)
     services.log_action(db, _user.id, "create_client", f"client_id={client.id}")
     return schemas.ClientOut(
@@ -147,7 +147,7 @@ def create_client(payload: schemas.ClientCreate, db: Session = Depends(get_db), 
 
 
 @router.get("/clients", response_model=list[schemas.ClientOut])
-def list_clients(db: Session = Depends(get_db), _user = Depends(require_roles({"AGENT", "ADMIN"}))):
+def list_clients(db: Session = Depends(get_db), _user = Depends(require_roles({"AGENT", "ADMIN", "OPERATOR"}))):
     clients = repositories.list_clients(db)
     return [schemas.ClientOut(
         id=c.id,

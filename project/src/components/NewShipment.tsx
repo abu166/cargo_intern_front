@@ -3,6 +3,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { ClientInfo } from './shipment-steps/ClientInfo';
 import { CargoDetails } from './shipment-steps/CargoDetails';
 import { Payment } from './shipment-steps/Payment';
+import { api } from '../lib/api';
 
 type Step = 'client' | 'cargo' | 'payment' | 'documents';
 
@@ -30,9 +31,84 @@ export function NewShipment() {
     hasTicket: false,
     ticketNumber: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [shipmentId, setShipmentId] = useState<number | null>(null);
+  const [documentId, setDocumentId] = useState<number | null>(null);
 
   const updateShipmentData = (data: Partial<typeof shipmentData>) => {
     setShipmentData({ ...shipmentData, ...data });
+  };
+
+  const parseDimensions = (value: string) => {
+    const parts = value
+      .replace(/[×x]/gi, 'x')
+      .split('x')
+      .map((part) => parseFloat(part.trim()))
+      .filter((num) => !Number.isNaN(num));
+    if (parts.length >= 3) {
+      return { length_cm: parts[0], width_cm: parts[1], height_cm: parts[2] };
+    }
+    return { length_cm: null, width_cm: null, height_cm: null };
+  };
+
+  const handlePaymentNext = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      let clientId: number | null = null;
+      if (shipmentData.clientName) {
+        const client = await api.createClient({
+          full_name: shipmentData.clientName,
+          document_id: `DOC-${Date.now()}`,
+          phone: shipmentData.clientPhone || undefined,
+        });
+        clientId = client.id;
+      }
+
+      let currentShipmentId = shipmentId;
+      if (!currentShipmentId) {
+        const dims = parseDimensions(shipmentData.dimensions);
+        const created = await api.createShipment({
+          client_id: clientId,
+          origin_station: shipmentData.fromStation,
+          destination_station: shipmentData.toStation,
+          weight_kg: shipmentData.weight ? parseFloat(shipmentData.weight) : null,
+          ...dims,
+        });
+        currentShipmentId = created.id;
+        setShipmentId(created.id);
+      }
+
+      await api.updateShipmentStatus(currentShipmentId, 'TARIFF_CALCULATED');
+
+      const amount = (() => {
+        let basePrice = 5000;
+        const weight = parseFloat(shipmentData.weight) || 0;
+        if (weight > 20) basePrice += (weight - 20) * 150;
+        if (shipmentData.isFragile) basePrice += 1000;
+        if (shipmentData.isOversized) basePrice += 2500;
+        if (shipmentData.hasTicket) basePrice = basePrice * 0.5;
+        return Math.round(basePrice);
+      })();
+
+      const payment = await api.createPayment({
+        shipment_id: currentShipmentId,
+        amount,
+        method: 'CASH',
+      });
+      await api.updatePayment(payment.id, { status: 'PAID' });
+
+      await api.generateQr(currentShipmentId);
+      const docs = await api.generateDocuments(currentShipmentId, ['LU-12', 'LU-63', 'WAYBILL']);
+      if (docs.length) {
+        setDocumentId(docs[0].id);
+      }
+      setCurrentStep('documents');
+    } catch (error) {
+      alert('Ошибка при создании отправки. Проверьте данные и попробуйте снова.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const renderStep = () => {
@@ -58,8 +134,9 @@ export function NewShipment() {
         return (
           <Payment
             data={shipmentData}
-            onNext={() => setCurrentStep('documents')}
+            onNext={handlePaymentNext}
             onBack={() => setCurrentStep('cargo')}
+            isSubmitting={isSubmitting}
           />
         );
       case 'documents':
@@ -74,7 +151,14 @@ export function NewShipment() {
               <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('shipmentCreated')}</h2>
               <p className="text-gray-600 mb-6">{t('documentsReady')}</p>
               <div className="space-y-3">
-                <button className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <button
+                  className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  onClick={() => {
+                    if (documentId) {
+                      api.getDocument(documentId).catch(() => {});
+                    }
+                  }}
+                >
                   {t('printDocuments')}
                 </button>
                 <button 
@@ -101,6 +185,8 @@ export function NewShipment() {
                       hasTicket: false,
                       ticketNumber: ''
                     });
+                    setShipmentId(null);
+                    setDocumentId(null);
                   }}
                   className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                 >

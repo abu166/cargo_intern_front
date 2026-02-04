@@ -89,7 +89,7 @@ def calc_tariff(payload: schemas.TariffCalc, db: Session = Depends(get_db), _use
 
 
 @router.post("/payments", response_model=schemas.PaymentOut)
-def create_payment(payload: schemas.PaymentCreate, db: Session = Depends(get_db), _user = Depends(require_roles({"CASHIER", "ADMIN"}))):
+def create_payment(payload: schemas.PaymentCreate, db: Session = Depends(get_db), _user = Depends(require_roles({"CASHIER", "ADMIN", "OPERATOR"}))):
     payment = services.create_payment(db, payload.shipment_id, payload.amount, payload.method)
     return schemas.PaymentOut(
         id=payment.id,
@@ -102,7 +102,7 @@ def create_payment(payload: schemas.PaymentCreate, db: Session = Depends(get_db)
 
 
 @router.put("/payments/{payment_id}", response_model=schemas.PaymentOut)
-def update_payment(payment_id: int, payload: schemas.PaymentUpdate, request: Request, db: Session = Depends(get_db), _user = Depends(require_roles({"CASHIER", "ADMIN"}))):
+def update_payment(payment_id: int, payload: schemas.PaymentUpdate, request: Request, db: Session = Depends(get_db), _user = Depends(require_roles({"CASHIER", "ADMIN", "OPERATOR"}))):
     payment = repositories.get_payment(db, payment_id)
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")

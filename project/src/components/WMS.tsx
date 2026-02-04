@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Package, QrCode, Weight, Ruler, CheckCircle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { api } from '../lib/api';
 
 type CellStatus = 'free' | 'occupied' | 'maintenance';
 
 interface StorageCell {
-  id: string;
+  id: number;
   number: string;
   status: CellStatus;
   shipmentId?: string;
@@ -16,23 +17,28 @@ type SelfServiceStep = 'scan' | 'place' | 'measure' | 'confirm';
 export function WMS() {
   const { t } = useLanguage();
   const [selfServiceStep, setSelfServiceStep] = useState<SelfServiceStep>('scan');
-  const [selectedCell, setSelectedCell] = useState<string | null>(null);
+  const [selectedCell, setSelectedCell] = useState<StorageCell | null>(null);
   const [measurements, setMeasurements] = useState({ weight: 0, dimensions: '' });
+  const [selfServiceShipmentId, setSelfServiceShipmentId] = useState('');
+  const [assignShipmentId, setAssignShipmentId] = useState('');
+  const [cells, setCells] = useState<StorageCell[]>([]);
 
-  const cells: StorageCell[] = [
-    { id: '1', number: 'A-01', status: 'free' },
-    { id: '2', number: 'A-02', status: 'occupied', shipmentId: 'SH-2024-001' },
-    { id: '3', number: 'A-03', status: 'free' },
-    { id: '4', number: 'A-04', status: 'free' },
-    { id: '5', number: 'A-05', status: 'occupied', shipmentId: 'SH-2024-003' },
-    { id: '6', number: 'A-06', status: 'maintenance' },
-    { id: '7', number: 'B-01', status: 'free' },
-    { id: '8', number: 'B-02', status: 'free' },
-    { id: '9', number: 'B-03', status: 'occupied', shipmentId: 'SH-2024-005' },
-    { id: '10', number: 'B-04', status: 'free' },
-    { id: '11', number: 'B-05', status: 'free' },
-    { id: '12', number: 'B-06', status: 'free' },
-  ];
+  const loadCells = () => {
+    api.listCells()
+      .then((data) => {
+        const mapped = data.map((cell) => ({
+          id: cell.id,
+          number: cell.code,
+          status: cell.status === 'OCCUPIED' ? 'occupied' : cell.status === 'FREE' ? 'free' : 'maintenance',
+        }));
+        setCells(mapped);
+      })
+      .catch(() => setCells([]));
+  };
+
+  useEffect(() => {
+    loadCells();
+  }, []);
 
   const getCellColor = (status: CellStatus) => {
     switch (status) {
@@ -61,12 +67,15 @@ export function WMS() {
     // Автоматически выбираем свободную ячейку
     const freeCell = cells.find(c => c.status === 'free');
     if (freeCell) {
-      setSelectedCell(freeCell.number);
+      setSelectedCell(freeCell);
     }
   };
 
   const handlePlaceInCell = () => {
     setSelfServiceStep('measure');
+    if (selectedCell) {
+      api.openCell(selectedCell.id).catch(() => {});
+    }
     // Симулируем автоматическое измерение
     setTimeout(() => {
       setMeasurements({
@@ -78,10 +87,22 @@ export function WMS() {
   };
 
   const handleConfirmShipment = () => {
+    if (selectedCell && selfServiceShipmentId) {
+      api.closeCell(selectedCell.id).catch(() => {});
+      api.createMeasurement({
+        shipment_id: Number(selfServiceShipmentId),
+        weight_kg: measurements.weight,
+        length_cm: 50,
+        width_cm: 40,
+        height_cm: 30,
+      }).catch(() => {});
+    }
     // Reset to initial state
     setSelfServiceStep('scan');
     setSelectedCell(null);
     setMeasurements({ weight: 0, dimensions: '' });
+    setSelfServiceShipmentId('');
+    loadCells();
   };
 
   return (
@@ -118,9 +139,9 @@ export function WMS() {
               <div
                 key={cell.id}
                 className={`aspect-square border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${getCellColor(cell.status)} ${
-                  selectedCell === cell.number ? 'ring-2 ring-blue-500' : ''
+                  selectedCell?.id === cell.id ? 'ring-2 ring-blue-500' : ''
                 }`}
-                onClick={() => cell.status === 'free' && setSelectedCell(cell.number)}
+                onClick={() => cell.status === 'free' && setSelectedCell(cell)}
               >
                 <Package className={`w-6 h-6 mb-1 ${getCellTextColor(cell.status)}`} />
                 <span className={`text-xs font-medium ${getCellTextColor(cell.status)}`}>
@@ -131,6 +152,42 @@ export function WMS() {
                 )}
               </div>
             ))}
+          </div>
+
+          <div className="mt-6 p-4 border border-gray-200 rounded-lg">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Управление ячейкой</h3>
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                type="number"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                placeholder="Shipment ID"
+                value={assignShipmentId}
+                onChange={(e) => setAssignShipmentId(e.target.value)}
+              />
+              <button
+                className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm"
+                onClick={() => {
+                  if (selectedCell && assignShipmentId) {
+                    api.assignCell(selectedCell.id, Number(assignShipmentId)).then(loadCells);
+                  }
+                }}
+              >
+                Assign
+              </button>
+              <button
+                className="px-3 py-2 bg-gray-600 text-white rounded-lg text-sm"
+                onClick={() => {
+                  if (selectedCell) {
+                    api.removeCell(selectedCell.id).then(loadCells);
+                  }
+                }}
+              >
+                Remove
+              </button>
+            </div>
+            <div className="text-xs text-gray-500">
+              Selected cell: {selectedCell ? selectedCell.number : '—'}
+            </div>
           </div>
         </div>
 
@@ -165,12 +222,21 @@ export function WMS() {
                     </div>
                   )}
                   {selfServiceStep === 'scan' && (
-                    <button
-                      onClick={handleScanComplete}
-                      className="w-full px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-                    >
-                      {t('startScanning')}
-                    </button>
+                    <>
+                      <input
+                        type="number"
+                        className="w-full mb-2 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        placeholder="Shipment ID"
+                        value={selfServiceShipmentId}
+                        onChange={(e) => setSelfServiceShipmentId(e.target.value)}
+                      />
+                      <button
+                        onClick={handleScanComplete}
+                        className="w-full px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                      >
+                        {t('startScanning')}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -201,7 +267,7 @@ export function WMS() {
                     <>
                       <div className="mb-3 p-3 bg-white rounded border border-gray-200">
                         <div className="text-sm text-gray-600 mb-1">{t('cellNumber')}:</div>
-                        <div className="text-lg font-semibold text-blue-600">{selectedCell}</div>
+                        <div className="text-lg font-semibold text-blue-600">{selectedCell.number}</div>
                       </div>
                       <button
                         onClick={handlePlaceInCell}

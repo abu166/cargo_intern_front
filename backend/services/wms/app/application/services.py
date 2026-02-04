@@ -51,6 +51,31 @@ def update_shipment_status(shipments_url: str, token: str, shipment_id: int, sta
     return response.json()
 
 
+def get_shipment(shipments_url: str, token: str, shipment_id: int):
+    with httpx.Client(timeout=5.0) as client:
+        response = client.get(
+            f"{shipments_url}/shipments/{shipment_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    response.raise_for_status()
+    return response.json()
+
+
+def advance_shipment_status(shipments_url: str, token: str, shipment_id: int, ordered: list[ShipmentStatus]):
+    current = get_shipment(shipments_url, token, shipment_id).get("status")
+    if current is None:
+        return None
+    order_values = [s.value for s in ordered]
+    if current in order_values:
+        start_index = order_values.index(current) + 1
+    else:
+        start_index = 0
+    result = None
+    for status in ordered[start_index:]:
+        result = update_shipment_status(shipments_url, token, shipment_id, status)
+    return result
+
+
 def confirm_dropoff(shipments_url: str, token: str, shipment_id: int, weight_kg: float, length_cm: float | None, width_cm: float | None, height_cm: float | None):
     with httpx.Client(timeout=5.0) as client:
         response = client.post(

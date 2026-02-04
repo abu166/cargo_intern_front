@@ -1,12 +1,20 @@
 import time
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.presentation.routes import router, SessionLocal, engine
 from app.infrastructure.db import Base
 from app.domain.models import Warehouse, StorageCell
 
 app = FastAPI(title="CargoTrans WMS Service")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(router)
 
 

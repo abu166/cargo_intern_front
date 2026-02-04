@@ -49,7 +49,7 @@ def require_roles(required: set[str]):
 
 
 @router.post("/shipments", response_model=schemas.ShipmentOut)
-def create_shipment(payload: schemas.ShipmentCreate, db: Session = Depends(get_db), _user = Depends(require_roles({"AGENT", "ADMIN"}))):
+def create_shipment(payload: schemas.ShipmentCreate, db: Session = Depends(get_db), _user = Depends(require_roles({"AGENT", "ADMIN", "OPERATOR"}))):
     shipment = Shipment(
         client_id=payload.client_id,
         origin_station=payload.origin_station,
@@ -126,7 +126,7 @@ def cancel_shipment(shipment_id: int, db: Session = Depends(get_db), _user = Dep
 
 
 @router.post("/shipments/{shipment_id}/qr", response_model=schemas.QRResponse)
-def generate_qr(shipment_id: int, db: Session = Depends(get_db), _user = Depends(require_roles({"AGENT", "ADMIN"}))):
+def generate_qr(shipment_id: int, db: Session = Depends(get_db), _user = Depends(require_roles({"AGENT", "ADMIN", "OPERATOR"}))):
     shipment = repositories.get_shipment(db, shipment_id)
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
@@ -163,7 +163,7 @@ def update_status(shipment_id: int, payload: schemas.StatusUpdate, db: Session =
 
 
 @router.post("/documents/generate", response_model=list[schemas.DocumentOut])
-def generate_docs(payload: schemas.DocumentGenerate, db: Session = Depends(get_db), _user = Depends(require_roles({"AGENT", "ADMIN"}))):
+def generate_docs(payload: schemas.DocumentGenerate, db: Session = Depends(get_db), _user = Depends(require_roles({"AGENT", "ADMIN", "OPERATOR"}))):
     shipment = repositories.get_shipment(db, payload.shipment_id)
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")

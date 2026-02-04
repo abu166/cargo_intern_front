@@ -1,8 +1,11 @@
 import { QrCode, Scan, ArrowDown, ArrowUp } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useState } from 'react';
+import { api } from '../lib/api';
 
 export function Transit() {
   const { t } = useLanguage();
+  const [scanShipmentId, setScanShipmentId] = useState('');
 
   const incomingShipments = [
     { id: 'SH-2024-101', from: 'Астана Нұрлы Жол', eta: '14:30', train: '№ 15', status: 'В пути' },
@@ -39,9 +42,41 @@ export function Transit() {
               </div>
             </div>
 
-            <button className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
-              {t('startScanning')}
-            </button>
+            <input
+              type="number"
+              className="w-full mb-3 px-4 py-2 border border-gray-300 rounded-lg"
+              placeholder="Shipment ID"
+              value={scanShipmentId}
+              onChange={(e) => setScanShipmentId(e.target.value)}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                onClick={() => api.scan({ shipment_id: Number(scanShipmentId), scanned_by: 'operator', location: 'Transit' })}
+              >
+                {t('startScanning')}
+              </button>
+              <button
+                className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium"
+                onClick={() => api.transportLoad(Number(scanShipmentId))}
+              >
+                {t('loading')}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <button
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
+                onClick={() => api.transportUnload(Number(scanShipmentId))}
+              >
+                {t('transit')}
+              </button>
+              <button
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                onClick={() => api.transportArrive(Number(scanShipmentId))}
+              >
+                {t('arrival')}
+              </button>
+            </div>
           </div>
         </div>
 

@@ -17,19 +17,19 @@ export function Login() {
     { id: 'receiver' as UserRole, name: 'Приёмосдатчик', icon: Package, demo: 'receiver@mail.kz' },
   ];
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Logging in with:', email, password, selectedRole);
-    login(email, password, selectedRole);
+    await login(email, password, selectedRole);
   };
 
-  const handleDemoLogin = (demoEmail: string, role: UserRole) => {
+  const handleDemoLogin = async (demoEmail: string, role: UserRole) => {
     console.log('Demo login:', demoEmail, role);
     setEmail(demoEmail);
     setPassword('demo');
     setSelectedRole(role);
     // Немедленно входим
-    login(demoEmail, 'demo', role);
+    await login(demoEmail, 'demo', role);
   };
 
   return (

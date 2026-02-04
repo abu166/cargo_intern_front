@@ -1,8 +1,13 @@
 import { FileText, Download, Calendar } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useState } from 'react';
+import { api } from '../lib/api';
 
 export function Reports() {
   const { t } = useLanguage();
+  const [fo3, setFo3] = useState<{ total_amount: number; payments_count: number } | null>(null);
+  const [auditCount, setAuditCount] = useState<number | null>(null);
+  const [routeId, setRouteId] = useState<number | null>(null);
 
   return (
     <div>
@@ -33,10 +38,18 @@ export function Reports() {
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <button
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              onClick={() => api.fo3Report().then(setFo3)}
+            >
               <Download className="w-4 h-4" />
               {t('generate')}
             </button>
+            {fo3 && (
+              <div className="text-xs text-gray-600 mt-2">
+                Всего оплат: {fo3.payments_count}, сумма: {fo3.total_amount} ₸
+              </div>
+            )}
           </div>
         </div>
 
@@ -94,10 +107,18 @@ export function Reports() {
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+            <button
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              onClick={() => api.auditLogs().then((logs) => setAuditCount(logs.length))}
+            >
               <Download className="w-4 h-4" />
               {t('export')}
             </button>
+            {auditCount !== null && (
+              <div className="text-xs text-gray-600 mt-2">
+                Записей: {auditCount}
+              </div>
+            )}
           </div>
         </div>
 
@@ -128,10 +149,22 @@ export function Reports() {
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+            <button
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+              onClick={async () => {
+                const plan = await api.createRoutePlan({ origin_station: 'A', destination_station: 'B', wagons_count: 2 });
+                await api.approveRoutePlan(plan.id);
+                setRouteId(plan.id);
+              }}
+            >
               <Download className="w-4 h-4" />
               {t('generate')}
             </button>
+            {routeId && (
+              <div className="text-xs text-gray-600 mt-2">
+                Route plan #{routeId} approved
+              </div>
+            )}
           </div>
         </div>
       </div>

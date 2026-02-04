@@ -1,64 +1,52 @@
 import { Search, Filter } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ShipmentDetailsModal } from './ShipmentDetailsModal';
+import { api } from '../lib/api';
 
 export function ActiveShipments() {
   const { t, language } = useLanguage();
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
+  const [shipments, setShipments] = useState<any[]>([]);
 
   const getStatus = (status: string) => {
     if (language === 'en') {
       switch (status) {
-        case 'В пути': return 'In Transit';
-        case 'Погружен': return 'Loaded';
-        case 'Прибыл': return 'Arrived';
+        case 'IN_TRANSIT': return 'In Transit';
+        case 'LOADED': return 'Loaded';
+        case 'ARRIVED': return 'Arrived';
         default: return status;
       }
     }
     if (language === 'kk') {
       switch (status) {
-        case 'В пути': return 'Жолда';
-        case 'Погружен': return 'Тиелген';
-        case 'Прибыл': return 'Келді';
+        case 'IN_TRANSIT': return 'Жолда';
+        case 'LOADED': return 'Тиелген';
+        case 'ARRIVED': return 'Келді';
         default: return status;
       }
     }
     return status;
   };
 
-  const shipments = [
-    {
-      id: 'SH-2024-001',
-      client: 'Нұрболат Әлібек Серікұлы',
-      from: 'Алматы',
-      to: 'Астана',
-      status: 'В пути',
-      statusColor: 'bg-blue-100 text-blue-700',
-      date: '20.01.2026',
-      weight: '15 кг'
-    },
-    {
-      id: 'SH-2024-002',
-      client: 'ЖШС "Логистика Плюс"',
-      from: 'Шымкент',
-      to: 'Қарағанды',
-      status: 'Погружен',
-      statusColor: 'bg-purple-100 text-purple-700',
-      date: '20.01.2026',
-      weight: '32 кг'
-    },
-    {
-      id: 'SH-2024-003',
-      client: 'Қайрат Айгүл Әміржанқызы',
-      from: 'Ақтөбе',
-      to: 'Алматы',
-      status: 'Прибыл',
-      statusColor: 'bg-green-100 text-green-700',
-      date: '19.01.2026',
-      weight: '8 кг'
+  const statusColor = (status: string) => {
+    switch (status) {
+      case 'IN_TRANSIT':
+        return 'bg-blue-100 text-blue-700';
+      case 'LOADED':
+        return 'bg-purple-100 text-purple-700';
+      case 'ARRIVED':
+        return 'bg-green-100 text-green-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
     }
-  ];
+  };
+
+  useEffect(() => {
+    api.listShipments()
+      .then((data) => setShipments(data))
+      .catch(() => setShipments([]));
+  }, []);
 
   return (
     <div>
@@ -116,31 +104,45 @@ export function ActiveShipments() {
               {shipments.map((shipment) => (
                 <tr key={shipment.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-medium text-blue-600">{shipment.id}</span>
+                    <span className="text-sm font-medium text-blue-600">{shipment.shipment_id || shipment.id}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">{shipment.client}</span>
+                    <span className="text-sm text-gray-900">{shipment.client_id ?? '-'}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-600">{shipment.from} → {shipment.to}</span>
+                    <span className="text-sm text-gray-600">{shipment.origin_station} → {shipment.destination_station}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-600">{shipment.weight}</span>
+                    <span className="text-sm text-gray-600">{shipment.weight_kg ?? '-'} кг</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-600">{shipment.date}</span>
+                    <span className="text-sm text-gray-600">{shipment.created_at?.slice(0, 10) ?? '-'}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${shipment.statusColor}`}>
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusColor(shipment.status)}`}>
                       {getStatus(shipment.status)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button 
-                      onClick={() => setSelectedShipment(shipment)}
+                      onClick={() => setSelectedShipment({
+                        id: shipment.shipment_id || shipment.id,
+                        client: shipment.client_id ? `Client #${shipment.client_id}` : '-',
+                        from: shipment.origin_station,
+                        to: shipment.destination_station,
+                        status: getStatus(shipment.status),
+                        date: shipment.created_at?.slice(0, 10) ?? '-',
+                        weight: `${shipment.weight_kg ?? '-'} кг`,
+                      })}
                       className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                     >
                       {t('details')}
+                    </button>
+                    <button
+                      onClick={() => api.cancelShipment(shipment.id)}
+                      className="ml-3 text-red-600 hover:text-red-700 text-sm font-medium"
+                    >
+                      {t('cancel')}
                     </button>
                   </td>
                 </tr>

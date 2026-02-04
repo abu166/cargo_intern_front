@@ -59,19 +59,19 @@ def get_token(request: Request) -> str:
 
 
 @router.get("/wms/warehouses", response_model=list[schemas.WarehouseOut])
-def list_warehouses(db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN"}))):
+def list_warehouses(db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN", "OPERATOR"}))):
     warehouses = repositories.list_warehouses(db)
     return [schemas.WarehouseOut(id=w.id, name=w.name, location=w.location, created_at=w.created_at) for w in warehouses]
 
 
 @router.get("/wms/cells", response_model=list[schemas.CellOut])
-def list_cells(status: str | None = None, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN"}))):
+def list_cells(status: str | None = None, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN", "OPERATOR"}))):
     cells = repositories.list_cells(db, status)
     return [schemas.CellOut(id=c.id, warehouse_id=c.warehouse_id, code=c.code, status=c.status, created_at=c.created_at) for c in cells]
 
 
 @router.post("/wms/sessions", response_model=schemas.SessionOut)
-def create_session(payload: schemas.SessionCreate, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN"}))):
+def create_session(payload: schemas.SessionCreate, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN", "OPERATOR"}))):
     session = services.create_cell_session(db, payload.shipment_id)
     return schemas.SessionOut(
         id=session.id,
@@ -85,7 +85,7 @@ def create_session(payload: schemas.SessionCreate, db: Session = Depends(get_db)
 
 
 @router.post("/wms/sessions/{session_id}/open-cell", response_model=schemas.SessionOut)
-def open_cell(session_id: int, cell_id: int, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN"}))):
+def open_cell(session_id: int, cell_id: int, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN", "OPERATOR"}))):
     session = repositories.get_session(db, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -111,7 +111,7 @@ def open_cell(session_id: int, cell_id: int, db: Session = Depends(get_db), _use
 
 
 @router.post("/wms/events", response_model=schemas.EventOut)
-def create_event(payload: schemas.EventCreate, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN"}))):
+def create_event(payload: schemas.EventCreate, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN", "OPERATOR"}))):
     event = services.log_event(db, payload.session_id, payload.event_type, payload.payload)
     return schemas.EventOut(
         id=event.id,
@@ -123,7 +123,7 @@ def create_event(payload: schemas.EventCreate, db: Session = Depends(get_db), _u
 
 
 @router.post("/wms/cells/open")
-def open_cell_manual(cell_id: int, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN"}))):
+def open_cell_manual(cell_id: int, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN", "OPERATOR"}))):
     cell = repositories.get_cell(db, cell_id)
     if not cell:
         raise HTTPException(status_code=404, detail="Cell not found")
@@ -133,7 +133,7 @@ def open_cell_manual(cell_id: int, db: Session = Depends(get_db), _user = Depend
 
 
 @router.post("/wms/cells/close")
-def close_cell_manual(cell_id: int, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN"}))):
+def close_cell_manual(cell_id: int, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN", "OPERATOR"}))):
     cell = repositories.get_cell(db, cell_id)
     if not cell:
         raise HTTPException(status_code=404, detail="Cell not found")
@@ -143,7 +143,7 @@ def close_cell_manual(cell_id: int, db: Session = Depends(get_db), _user = Depen
 
 
 @router.post("/wms/assign")
-def assign_shipment(cell_id: int, shipment_id: int, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN"}))):
+def assign_shipment(cell_id: int, shipment_id: int, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN", "OPERATOR"}))):
     cell = repositories.get_cell(db, cell_id)
     if not cell:
         raise HTTPException(status_code=404, detail="Cell not found")
@@ -153,7 +153,7 @@ def assign_shipment(cell_id: int, shipment_id: int, db: Session = Depends(get_db
 
 
 @router.post("/wms/remove")
-def remove_shipment(cell_id: int, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN"}))):
+def remove_shipment(cell_id: int, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN", "OPERATOR"}))):
     cell = repositories.get_cell(db, cell_id)
     if not cell:
         raise HTTPException(status_code=404, detail="Cell not found")
@@ -163,7 +163,7 @@ def remove_shipment(cell_id: int, db: Session = Depends(get_db), _user = Depends
 
 
 @router.post("/measurements", response_model=schemas.MeasurementOut)
-def create_measurement(payload: schemas.MeasurementCreate, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN"}))):
+def create_measurement(payload: schemas.MeasurementCreate, db: Session = Depends(get_db), _user = Depends(require_roles({"WMS", "ADMIN", "OPERATOR"}))):
     measurement = services.record_measurement(
         db,
         payload.shipment_id,
@@ -217,36 +217,57 @@ def approve_route(plan_id: int, db: Session = Depends(get_db), _user = Depends(r
 @router.post("/transport/load")
 def transport_load(payload: schemas.TransportAction, request: Request, _user = Depends(require_roles({"OPERATOR", "ADMIN"}))):
     token = get_token(request)
-    services.update_shipment_status(SHIPMENTS_URL, token, payload.shipment_id, ShipmentStatus.LOADED)
+    services.advance_shipment_status(SHIPMENTS_URL, token, payload.shipment_id, [ShipmentStatus.LOADED])
     return {"status": "loaded"}
 
 
 @router.post("/transport/unload")
 def transport_unload(payload: schemas.TransportAction, request: Request, _user = Depends(require_roles({"OPERATOR", "ADMIN"}))):
     token = get_token(request)
-    services.update_shipment_status(SHIPMENTS_URL, token, payload.shipment_id, ShipmentStatus.IN_TRANSIT)
+    services.advance_shipment_status(SHIPMENTS_URL, token, payload.shipment_id, [ShipmentStatus.LOADED, ShipmentStatus.IN_TRANSIT])
     return {"status": "in_transit"}
 
 
 @router.post("/transport/arrive")
 def transport_arrive(payload: schemas.TransportAction, request: Request, _user = Depends(require_roles({"OPERATOR", "ADMIN"}))):
     token = get_token(request)
-    services.update_shipment_status(SHIPMENTS_URL, token, payload.shipment_id, ShipmentStatus.ARRIVED)
+    services.advance_shipment_status(
+        SHIPMENTS_URL,
+        token,
+        payload.shipment_id,
+        [ShipmentStatus.LOADED, ShipmentStatus.IN_TRANSIT, ShipmentStatus.ARRIVED],
+    )
     return {"status": "arrived"}
 
 
 @router.post("/delivery/ready")
 def delivery_ready(payload: schemas.DeliveryAction, request: Request, _user = Depends(require_roles({"OPERATOR", "ADMIN"}))):
     token = get_token(request)
-    services.update_shipment_status(SHIPMENTS_URL, token, payload.shipment_id, ShipmentStatus.NOTIFIED)
+    services.advance_shipment_status(
+        SHIPMENTS_URL,
+        token,
+        payload.shipment_id,
+        [ShipmentStatus.LOADED, ShipmentStatus.IN_TRANSIT, ShipmentStatus.ARRIVED, ShipmentStatus.NOTIFIED],
+    )
     return {"status": "notified"}
 
 
 @router.post("/delivery/confirm")
 def delivery_confirm(payload: schemas.DeliveryAction, request: Request, _user = Depends(require_roles({"OPERATOR", "ADMIN"}))):
     token = get_token(request)
-    services.update_shipment_status(SHIPMENTS_URL, token, payload.shipment_id, ShipmentStatus.ISSUED)
-    services.update_shipment_status(SHIPMENTS_URL, token, payload.shipment_id, ShipmentStatus.CLOSED)
+    services.advance_shipment_status(
+        SHIPMENTS_URL,
+        token,
+        payload.shipment_id,
+        [
+            ShipmentStatus.LOADED,
+            ShipmentStatus.IN_TRANSIT,
+            ShipmentStatus.ARRIVED,
+            ShipmentStatus.NOTIFIED,
+            ShipmentStatus.ISSUED,
+            ShipmentStatus.CLOSED,
+        ],
+    )
     return {"status": "closed"}
 
 

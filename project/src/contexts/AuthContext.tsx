@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { api, clearToken, getToken, setToken } from '../lib/api';
 
 type UserRole = 'operator' | 'corporate' | 'individual' | 'receiver' | 'aggregator';
 
@@ -11,12 +12,13 @@ interface User {
   depositBalance?: number;
   contractNumber?: string;
   aggregatorType?: 'glovo' | 'choko';
+  roles?: string[];
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role: UserRole) => void;
-  logout: () => void;
+  login: (email: string, password: string, role: UserRole) => Promise<void>;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -25,75 +27,61 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
-  const login = (email: string, password: string, role: UserRole) => {
-    console.log('Auth login called:', email, role);
-    void password;
-    
-    // Mock authentication - в реальной системе здесь будет API вызов
-    const mockUsers: Record<string, User> = {
-      'operator@mail.kz': {
-        id: '1',
-        name: 'Айдана Сериковна',
-        email: 'operator@mail.kz',
-        role: 'operator'
-      },
-      'corporate@mail.kz': {
-        id: '2',
-        name: 'ТОО "Логистика Плюс"',
-        email: 'corporate@mail.kz',
-        role: 'corporate',
-        company: 'ТОО "Логистика Плюс"',
-        depositBalance: 150000,
-        contractNumber: 'КТ-2024-001'
-      },
-      'user@mail.kz': {
-        id: '3',
-        name: 'Нұрболат Әлібек',
-        email: 'user@mail.kz',
-        role: 'individual'
-      },
-      'receiver@mail.kz': {
-        id: '4',
-        name: 'Серік Даулет',
-        email: 'receiver@mail.kz',
-        role: 'receiver'
-      },
-      'glovo@mail.kz': {
-        id: '5',
-        name: 'Glovo Kazakhstan',
-        email: 'glovo@mail.kz',
-        role: 'aggregator',
-        aggregatorType: 'glovo',
-        company: 'Glovo'
-      },
-      'choko@mail.kz': {
-        id: '6',
-        name: 'Choko Delivery',
-        email: 'choko@mail.kz',
-        role: 'aggregator',
-        aggregatorType: 'choko',
-        company: 'Choko'
-      }
-    };
+  const resolveRole = (roles: string[], fallback: UserRole): UserRole => {
+    if (roles.includes('CORPORATE')) return 'corporate';
+    if (roles.includes('INDIVIDUAL')) return 'individual';
+    if (roles.includes('RECEIVER')) return 'receiver';
+    if (roles.includes('AGGREGATOR')) return 'aggregator';
+    if (roles.includes('OPERATOR') || roles.includes('AGENT') || roles.includes('ADMIN')) return 'operator';
+    return fallback;
+  };
 
-    const foundUser = mockUsers[email];
-    if (foundUser) {
-      console.log('User found:', foundUser);
-      setUser(foundUser);
-    } else {
-      console.log('User not found for email:', email);
+  const login = async (email: string, password: string, role: UserRole) => {
+    try {
+      const result = await api.authLogin(email, password);
+      setToken(result.access_token);
+      const me = await api.authMe();
+      setUser({
+        id: String(me.id),
+        name: me.full_name || me.username,
+        email,
+        role: resolveRole(me.roles, role),
+        roles: me.roles,
+      });
+    } catch (error) {
+      clearToken();
       alert('Неверный email или пароль');
     }
   };
 
-  const logout = () => {
-    console.log('Logging out');
-    setUser(null);
+  const logout = async () => {
+    try {
+      await api.authLogout();
+    } finally {
+      clearToken();
+      setUser(null);
+    }
   };
 
   const isAuthenticated = !!user;
-  
-  console.log('Auth context state:', { user, isAuthenticated });
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    api.authMe()
+      .then((me) => {
+        setUser({
+          id: String(me.id),
+          name: me.full_name || me.username,
+          email: me.username,
+          role: resolveRole(me.roles, 'operator'),
+          roles: me.roles,
+        });
+      })
+      .catch(() => {
+        clearToken();
+      });
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
