@@ -6,6 +6,7 @@
 3. Shipments: `http://localhost:8002`
 4. Finance: `http://localhost:8003`
 5. WMS: `http://localhost:8004`
+6. Portal (frontend API + Socket.IO): `http://localhost:3000`
 
 Default admin:
 - username: `admin`
@@ -20,6 +21,7 @@ Default admin:
 - Shipments: shipments, status transitions, QR, documents, scan events
 - Finance: tariffs, payments, FO-3 report
 - WMS: warehouses, cells, sessions, sensor events, route planning, transport, delivery
+- Portal: frontend auth, staff admin, live shipments (Socket.IO)
 
 ## Notes
 - Each service uses its own Postgres database.

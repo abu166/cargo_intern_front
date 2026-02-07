@@ -78,5 +78,17 @@ services:
     ports:
       - "8004:8000"
 
+  portal:
+    build:
+      context: .
+      dockerfile: ./services/portal/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg2://cargo:cargo@postgres:5432/portal_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:8000"
+
 volumes:
   pgdata:
