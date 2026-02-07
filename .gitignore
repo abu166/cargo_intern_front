@@ -5,3 +5,9 @@ project/dist/
 project/tsconfig*.tsbuildinfo
 project/vite.config.d.ts
 project/vite.config.js
+
+frontend/node_modules/
+frontend/dist/
+frontend/*.sqlite
+frontend/project_backup.zip
+frontend/.DS_Store
